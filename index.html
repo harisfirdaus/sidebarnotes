@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sidebar Notes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+
+        header {
+            background: linear-gradient(to right, blue, green, orange);
+            color: white;
+            padding: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: left;
+            width: 90%;
+            max-width: 800px;
+            margin: 0 auto 10px auto;
+            border-radius: 5px;
+        }
+
+        main {
+            flex: 1;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-y: auto;
+        }
+
+        textarea {
+            width: 90%;
+            max-width: 800px;
+            height: 200px;
+            margin-bottom: 10px;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid;
+            border-image-source: linear-gradient(to right, blue, green, orange);
+            border-image-slice: 1;
+            border-radius: 5px;
+            resize: vertical;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            width: 90%;
+            max-width: 800px;
+            justify-content: flex-start;
+        }
+
+        button {
+            padding: 10px 15px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #add-note {
+            background-color: #007bff;
+            color: white;
+        }
+
+        #add-note:hover {
+            background-color: #0056b3;
+        }
+
+        #new-note {
+            background-color: green;
+            color: white;
+        }
+
+        #new-note:hover {
+            background-color: darkgreen;
+        }
+
+        #save-note {
+            background-color: #ccc;
+            color: black;
+        }
+
+        #save-note:hover {
+            background-color: #aaa;
+        }
+
+        #download-note {
+            background-color: #ffa500;
+            color: white;
+        }
+
+        #download-note:hover {
+            background-color: #cc8400;
+        }
+
+        #note-list {
+            list-style: none;
+            padding: 0;
+            width: 90%;
+            max-width: 800px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        #note-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid;
+            border-image-source: linear-gradient(to right, blue, green, orange);
+            border-image-slice: 1;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            background-color: white;
+            cursor: pointer;
+        }
+
+        #note-list li span {
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            max-width: 70%;
+        }
+
+        #note-list li button {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        #note-list li button:hover {
+            background-color: #a71d2a;
+        }
+
+        .word-count {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 10px;
+            width: 90%;
+            max-width: 800px;
+        }
+
+        @media (max-width: 768px) {
+            textarea, .buttons, #note-list {
+                max-width: 400px;
+            }
+
+            header {
+                max-width: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>Sidebar Notes</header>
+    <main>
+       <textarea id="note-text" placeholder="Write your note here..."></textarea>
+<div class="word-count" id="word-count">Words: 0 | Characters: 0</div>
+        
+        <div class="buttons">
+<button id="save-note" title="Save Note" style="display: none;">💾</button>
+            <button id="add-note">Add Note</button>
+            <button id="new-note">New Note</button>
+            <button id="download-note">Download Note</button>
+        </div>
+        <ul id="note-list"></ul>
+    </main>
+
+    <script>
+        const noteText = document.getElementById('note-text');
+        const addNoteButton = document.getElementById('add-note');
+        const newNoteButton = document.getElementById('new-note');
+        const downloadNoteButton = document.getElementById('download-note');
+        const saveNoteButton = document.getElementById('save-note');
+        const noteList = document.getElementById('note-list');
+        const wordCountDisplay = document.getElementById('word-count');
+
+        let editingIndex = null;
+
+        function updateWordCount() {
+            const text = noteText.value;
+            const words = text.trim().split(/\s+/).filter(Boolean);
+            wordCountDisplay.textContent = `Words: ${words.length} | Characters: ${text.length}`;
+        }
+
+        function saveNotes(notes) {
+            localStorage.setItem('sidebarNotes', JSON.stringify(notes));
+        }
+
+        function loadNotes() {
+            const notes = localStorage.getItem('sidebarNotes');
+            return notes ? JSON.parse(notes) : [];
+        }
+
+        function getFirstSentence(text) {
+            const match = text.match(/^[^.!?]*[.!?]/); // Match first sentence ending with . ! or ?
+            return match ? match[0] : text;
+        }
+
+        function renderNotes() {
+            noteList.innerHTML = '';
+            const notes = loadNotes();
+            notes.forEach((note, index) => {
+                const li = document.createElement('li');
+                li.onclick = () => {
+                    noteText.value = note;
+                    updateWordCount();
+                    editingIndex = index;
+                    addNoteButton.textContent = 'Update Note';
+                    saveNoteButton.style.display = 'block';
+                };
+                const span = document.createElement('span');
+                const firstSentence = getFirstSentence(note);
+                const truncated = firstSentence.length > 70 ? firstSentence.slice(0, 67) + '...' : firstSentence;
+                span.textContent = truncated;
+                span.title = note;
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Delete';
+                deleteButton.onclick = (e) => {
+                    e.stopPropagation();
+                    notes.splice(index, 1);
+                    saveNotes(notes);
+                    renderNotes();
+                };
+                li.appendChild(span);
+                li.appendChild(deleteButton);
+                noteList.appendChild(li);
+            });
+        }
+
+        addNoteButton.addEventListener('click', () => {
+            const note = noteText.value.trim();
+            if (note.length > 0) {
+                let notes = loadNotes();
+                if (editingIndex !== null) {
+                    notes.splice(editingIndex, 1); // Remove the old version of the note
+                    editingIndex = null;
+                    addNoteButton.textContent = 'Add Note';
+                }
+                notes.unshift(note); // Add the note to the top of the list
+                saveNotes(notes);
+                renderNotes();
+                noteText.value = '';
+                updateWordCount();
+                saveNoteButton.style.display = 'none';
+            }
+        });
+
+        saveNoteButton.addEventListener('click', () => {
+            const note = noteText.value.trim();
+            if (note.length > 0 && editingIndex !== null) {
+                let notes = loadNotes();
+                notes[editingIndex] = note; // Update the existing note
+                saveNotes(notes);
+                renderNotes();
+                updateWordCount();
+            } else {
+                alert('No note is being edited to save.');
+            }
+        });
+
+        newNoteButton.addEventListener('click', () => {
+            noteText.value = '';
+            updateWordCount();
+            editingIndex = null;
+            addNoteButton.textContent = 'Add Note';
+            saveNoteButton.style.display = 'none';
+        });
+
+        downloadNoteButton.addEventListener('click', () => {
+            const note = noteText.value.trim();
+            if (note.length > 0) {
+                const blob = new Blob([note], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'note.txt';
+                a.click();
+                URL.revokeObjectURL(url);
+            } else {
+                alert('No note to download.');
+            }
+        });
+
+        noteText.addEventListener('input', () => {
+            updateWordCount();
+            if (editingIndex !== null) {
+                saveNoteButton.style.display = 'block';
+            }
+        });
+
+        // Initialize app
+        renderNotes();
+        updateWordCount();
+    </script>
+</body>
+</html>
